@@ -8,7 +8,7 @@
 # See:
 # [1] http://ezekiel.vancouver.wsu.edu/~cs317/archive/projects/grep/grep.pdf
 # [2] http://swtch.com/~rsc/regexp/regexp1.html
-# [3] http://scriptasylum.com/tutorials/infix_postfix/algorithms/infix-postfix/
+# [3] http://csis.pace.edu/~wolf/CS122/infix-postfix.htm
 # [4] http://stackoverflow.com/q/60208/1830334
 # -----------------------------------------------------------------------------
 
@@ -29,16 +29,13 @@ class Pyre:
             '$': 4
         }
 
-
     def compile(self, re):
         post = self.re2post(re)
         print(post)
 
-    
     # Calculates operator precedence. See [4]
     def prec(self, char):
         return self.operators[char]
-
 
     # "...postﬁx notation [is] nice because parentheses are unneeded
     # since [it does] not have the operator-operand ambiguity inherent to inﬁx
@@ -85,7 +82,6 @@ class Pyre:
             post_str += stack.pop()
 
         return post_str
-
 
     # "We will convert a postﬁx regular expression into an NFA using a stack,
     # where each element on the stack is an NFA."
