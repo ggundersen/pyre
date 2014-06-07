@@ -26,7 +26,7 @@ class Pyre:
             '?': 2,
             '^': 3,
             '$': 4
-        ]
+        }
 
 
     def compile(self, re):
