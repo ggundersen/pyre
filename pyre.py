@@ -71,8 +71,12 @@ class Pyre:
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
-                    print '\t\t' + char + 'has lower precedence, pop top of stack'
-                    post_str += stack.pop()
+                    while stack and self.prec(char) <= self.prec(stack[-1]):
+                        print '\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack'
+                        post_str += stack.pop()
+                        print '\t\t\t' + str(stack)
+                        print '\t\t\t' + post_str
+                    stack.append(char)
             else:
                 print '\t' + char + ' is literal'
                 post_str += char
