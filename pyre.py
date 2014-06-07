@@ -37,7 +37,7 @@ class Pyre:
     
     # Calculates operator precedence. See [4]
     def prec(self, char):
-        return self.operators[char].get(char, 0)
+        return self.operators[char]
 
 
     # "...postﬁx notation [is] nice because parentheses are unneeded
@@ -59,16 +59,22 @@ class Pyre:
         stack = list()
 
         for char in in_str:
+            print 'char: ' + char
             if char in self.operators:
+                print '\t' + char + ' is in the list of operators'
                 if not stack:
+                    print '\t\t' + 'stack empty, placing ' + char + ' onto stack'
                     stack.append(char)
                 # If `char` has a higher precedence than the top of the stack:
-                elif self.prec(char) < self.prec(stack[-1]):
+                elif self.prec(char) > self.prec(stack[-1]):
+                    print '\t\t' + char + ' has higher precedence, placed onto stack'
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
+                    print '\t\t' + char + 'has lower precedence, pop top of stack'
                     post_str += stack.pop()
             else:
+                print '\t' + char + ' is literal'
                 post_str += char
 
         while stack:
