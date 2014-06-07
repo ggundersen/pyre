@@ -26,32 +26,29 @@ class Pyre:
             '-': 7,
             '?': 6,
             '^': 5,
-            '$': 4
+            '$': 4,
+            '(': 0,
+            ')': 0
         }
 
     def compile(self, re):
-        post = self.re2post(re)
+        post = self.in2post(re)
         print(post)
 
     # Calculates operator precedence. See [4]
     def prec(self, char):
         return self.operators[char]
 
-    # "...postﬁx notation [is] nice because parentheses are unneeded
-    # since [it does] not have the operator-operand ambiguity inherent to inﬁx
+    # "...postﬁx notation [is] nice because parentheses are unneeded since [it
+    # does] not have the operator-operand ambiguity inherent to inﬁx 
     # expressions."[1]
-    #
-    # The idea is to eliminate parenthesis, for example:
-    # ((a|b)*aba*)*(a|b)(a|b)
-    # will be converted to
-    # ab|*a&b&a*&*ab|&ab|&
     #
     # We will use the "&" symbol as an explicit concatentation operator.
     # Ken Thompson originally used the "."[2] but we want to use the dot as a
     # wild card. 
     #
     # The algorithm used is from [3].
-    def re2post(self, in_str):
+    def in2post(self, in_str):
         post_str = ''
         stack = list()
 
@@ -68,12 +65,22 @@ class Pyre:
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
-                    while stack and self.prec(char) <= self.prec(stack[-1]):
-                        print '\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack'
-                        post_str += stack.pop()
-                        print '\t\t\t' + str(stack)
-                        print '\t\t\t' + post_str
-                    stack.append(char)
+                    # If we see an open paren, do not pop operators off stack.
+                    if char is '(':
+                        # Place open paren on stack as a marker
+                        print '\t\topen paren found, placing on stack'
+                        stack.append(char)
+                    elif char is ')':
+                        print '\t\tclose paren found, pop stack until find open paren'
+                        while stack and stack[-1] is not '(':
+                            post_str += stack.pop()
+                    else:
+                        while stack and self.prec(char) <= self.prec(stack[-1]):
+                            print '\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack'
+                            post_str += stack.pop()
+                            print '\t\t\t' + str(stack)
+                            print '\t\t\t' + post_str
+                        stack.append(char)
             else:
                 print '\t' + char + ' is literal'
                 post_str += char
