@@ -20,11 +20,12 @@ class Pyre:
 
     def __init__(self):
         self.operators = {
-            '|': 0,
-            '*': 1,
-            '+': 1,
-            '?': 2,
-            '^': 3,
+            '|': 9,
+            '*': 8,
+            '+': 7,
+            '-': 7,
+            '?': 6,
+            '^': 5,
             '$': 4
         }
 
@@ -34,9 +35,9 @@ class Pyre:
         print(post)
 
     
-    # See [4]
-    def precedence(self, char):
-        return self.operators[char].get(char, 9)
+    # Calculates operator precedence. See [4]
+    def prec(self, char):
+        return self.operators[char].get(char, 0)
 
 
     # "...postﬁx notation [is] nice because parentheses are unneeded
@@ -62,7 +63,7 @@ class Pyre:
                 if not stack:
                     stack.append(char)
                 # If `char` has a higher precedence than the top of the stack:
-                elif self.operators.index(char) < self.operators.index(stack[-1]):
+                elif self.prec(char) < self.prec(stack[-1]):
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
