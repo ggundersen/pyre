@@ -14,18 +14,24 @@
 
 
 import sys
+from enum import Enum
+
+
+class Control(Enum):
+    split = 256
+    match = 257
 
 
 class NfaState:
 
-    def __init__(self, control, out, last_list, out2=None):
+    def __init__(self, control, out1, last_list, out2=None):
         self.control = control
-	self.out = out
-	self.out2 = out2
-	self.last_list = last_list
+        self.out1 = out1
+        self.out2 = out2
+        self.last_list = last_list
 
 
-class NfaFragment:
+class NfaFrag:
 
     def __init__(self, start, out_list):
         self.start = start
@@ -69,6 +75,8 @@ class Pyre:
     # wild card. 
     #
     # The algorithm used is from [3].
+
+    # TODO: Should convert implicit concatentation, e.g. AB, into explicit concatentation, e.g. A&B 
     def in2post(self, in_str):
 
         self.debug_print('IN2POST ---------------------------------')
@@ -120,26 +128,29 @@ class Pyre:
     # "We will convert a postﬁx regular expression into an NFA using a stack,
     # where each element on the stack is an NFA."
     def post2nfa(self, post):
-
         self.debug_print('POST2NFA ---------------------------------')
-
         stack = list()
-
-        # TODO: Is this Pythonic? In JS, I could declare an uninitialized variable.
-        state = None
 
         for idx, char in enumerate(post):
             if char is '\\':
                 self.debug_print('char is escape')
 
-            # Wildcard
+            # TODO: in2post 
             elif char is '.':
-                # Push NFA fragment that accepts any input
-                stack.push('')
+                self.debug_print('char is wildcard')
+
+            elif char is '|':
+                #e1 = stack.pop()
+                #e2 = stack.pop()
+                #state = NfaState(Control.split, e1.start, e2.start)
+                #stack.append( NfaFrag(state, state.out) )
+                #self.debug_print(str(stack))
+                self.debug_print('char is pipe')
 
             else:
                 state = NfaState(idx, None, None)
-
+                stack.append( NfaFrag(state, state.out) )
+                self.debug_print(str(state))
 
 
     def match(self, str):

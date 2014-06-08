@@ -1,7 +1,6 @@
 import unittest
 
-from pyre import Pyre
-
+import pyre
 
 class TestIn2Post(unittest.TestCase):
 
