@@ -18,7 +18,8 @@ import sys
 
 class Pyre:
 
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.debug = debug
         self.operators = {
             '|': 9,
             '*': 8,
@@ -30,6 +31,10 @@ class Pyre:
             '(': 0,
             ')': 0
         }
+
+    def debug_print(self, msg):
+        if (self.debug):
+            print(msg)
 
     def compile(self, re):
         post = self.in2post(re)
@@ -53,39 +58,39 @@ class Pyre:
         stack = list()
 
         for char in in_str:
-            print 'char: ' + char
+            self.debug_print('char: ' + char)
             if char in self.operators:
-                print '\t' + char + ' is in the list of operators'
+                self.debug_print('\t' + char + ' is in the list of operators')
                 if not stack:
-                    print '\t\t' + 'stack empty, placing ' + char + ' onto stack'
+                    self.debug_print('\t\t' + 'stack empty, placing ' + char + ' onto stack')
                     stack.append(char)
                 # If `char` has a higher precedence than the top of the stack:
                 elif self.prec(char) > self.prec(stack[-1]):
-                    print '\t\t' + char + ' has higher precedence, placed onto stack'
+                    self.debug_print('\t\t' + char + ' has higher precedence, placed onto stack')
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
                     # If we see an open paren, do not pop operators off stack.
                     if char is '(':
                         # Place open paren on stack as a marker
-                        print '\t\topen paren found, placing on stack'
+                        self.debug_print('\t\topen paren found, placing on stack')
                         stack.append(char)
                     elif char is ')':
                         # TODO: What if there is no open paren?
-                        print '\t\tclose paren found, pop stack until find open paren'
+                        self.debug_print('\t\tclose paren found, pop stack until find open paren')
                         while stack and stack[-1] is not '(':
                             post_str += stack.pop()
                         # Remove open paren
                         stack.pop()
                     else:
                         while stack and self.prec(char) <= self.prec(stack[-1]):
-                            print '\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack'
+                            self.debug_print('\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
                             post_str += stack.pop()
-                            print '\t\t\t' + str(stack)
-                            print '\t\t\t' + post_str
+                            self.debug_print('\t\t\t' + str(stack))
+                            self.debug_print('\t\t\t' + post_str)
                         stack.append(char)
             else:
-                print '\t' + char + ' is literal'
+                self.debug_print('\t' + char + ' is literal')
                 post_str += char
 
         while stack:
@@ -104,6 +109,6 @@ class Pyre:
 
 
 if __name__ == '__main__':
-    pyre = Pyre()
+    pyre = Pyre(debug=sys.argv[2:])
     pyre.compile(sys.argv[1])
     pyre.match('aab')
