@@ -71,9 +71,12 @@ class Pyre:
                         print '\t\topen paren found, placing on stack'
                         stack.append(char)
                     elif char is ')':
+                        # TODO: What if there is no open paren?
                         print '\t\tclose paren found, pop stack until find open paren'
                         while stack and stack[-1] is not '(':
                             post_str += stack.pop()
+                        # Remove open paren
+                        stack.pop()
                     else:
                         while stack and self.prec(char) <= self.prec(stack[-1]):
                             print '\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack'
