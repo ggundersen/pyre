@@ -16,6 +16,22 @@
 import sys
 
 
+class NfaState:
+
+    def __init__(self, control, out, last_list, out2=None):
+        self.control = control
+	self.out = out
+	self.out2 = out2
+	self.last_list = last_list
+
+
+class NfaFragment:
+
+    def __init__(self, start, out_list):
+        self.start = start
+        self.out_list = out_list
+
+
 class Pyre:
 
     def __init__(self, debug=False):
@@ -38,7 +54,7 @@ class Pyre:
 
     def compile(self, re):
         post = self.in2post(re)
-        print(post)
+        self.post2nfa(post)
 
     # Calculates operator precedence. See [4]
     def prec(self, char):
@@ -54,7 +70,10 @@ class Pyre:
     #
     # The algorithm used is from [3].
     def in2post(self, in_str):
-        post_str = ''
+
+        self.debug_print('IN2POST ---------------------------------')
+
+        post = ''
         stack = list()
 
         for char in in_str:
@@ -79,29 +98,48 @@ class Pyre:
                         # TODO: What if there is no open paren?
                         self.debug_print('\t\tclose paren found, pop stack until find open paren')
                         while stack and stack[-1] is not '(':
-                            post_str += stack.pop()
+                            post += stack.pop()
                         # Remove open paren
                         stack.pop()
                     else:
                         while stack and self.prec(char) <= self.prec(stack[-1]):
                             self.debug_print('\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
-                            post_str += stack.pop()
+                            post += stack.pop()
                             self.debug_print('\t\t\t' + str(stack))
-                            self.debug_print('\t\t\t' + post_str)
+                            self.debug_print('\t\t\t' + post)
                         stack.append(char)
             else:
                 self.debug_print('\t' + char + ' is literal')
-                post_str += char
+                post += char
 
         while stack:
-            post_str += stack.pop()
+            post += stack.pop()
 
-        return post_str
+        return post
 
     # "We will convert a postﬁx regular expression into an NFA using a stack,
     # where each element on the stack is an NFA."
-    def post2nfa(post):
-        pass
+    def post2nfa(self, post):
+
+        self.debug_print('POST2NFA ---------------------------------')
+
+        stack = list()
+
+        # TODO: Is this Pythonic? In JS, I could declare an uninitialized variable.
+        state = None
+
+        for idx, char in enumerate(post):
+            if char is '\\':
+                self.debug_print('char is escape')
+
+            # Wildcard
+            elif char is '.':
+                # Push NFA fragment that accepts any input
+                stack.push('')
+
+            else:
+                state = NfaState(idx, None, None)
+
 
 
     def match(self, str):
