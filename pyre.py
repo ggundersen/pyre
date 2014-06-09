@@ -149,13 +149,14 @@ class Pyre:
 # -----------------------------------------------------------------------------
             # e+ matches one or more e's. Notice that we 
             if char is '+':
-                # Remove the NFA fragment currently on the stack
+                # Remove the NFA fragment currently on the stack. This is the
+                # one that we want to repeat. 
                 e = stack.pop()
                 # Create a new NFA state in which the first out state is e, the
-                # previous state 
-                s = NfaState( Control.split, e.start, None )
-                # e.out is a OutList, a list of references to other states.
-                # Patch 
+                # previous state. This represents the loop. 
+                s = NfaState(Control.split, e.start, None)
+                # Patch takes the dangling out states of e and points them to
+                # s. This 'patches' the NFA fragments into a larger fragment. 
                 e.out_list.patch(s)
                 stack.append( NfaFrag(s, s.out1) )
                 self.debug_print(str(stack))
