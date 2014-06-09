@@ -23,9 +23,10 @@ class Control(Enum):
 
 
 class NfaState:
-
-    def __init__(self, control, out1, last_list, out2=None):
+    
+    def __init__(self, control, out1, out2, last_list=None):
         self.control = control
+        # out1 and out2 are `OutList`s, list of references to out states.
         self.out1 = out1
         self.out2 = out2
         self.last_list = last_list
@@ -36,6 +37,19 @@ class NfaFrag:
     def __init__(self, start, out_list):
         self.start = start
         self.out_list = out_list
+
+
+class OutList:
+
+    def __init__(self, out):
+        self.l = [out]
+
+    def patch(self, state):
+        for ptr in self.l:
+            ptr = state
+
+    def append(self, l2):
+        return self.l + l2
 
 
 class Pyre:
@@ -82,75 +96,76 @@ class Pyre:
         self.debug_print('IN2POST ---------------------------------')
 
         post = ''
-        stack = list()
+        stack = []
 
         for char in in_str:
-            self.debug_print('char: ' + char)
             if char in self.operators:
-                self.debug_print('\t' + char + ' is in the list of operators')
+                self.debug_print(char + ' is in the list of operators')
                 if not stack:
-                    self.debug_print('\t\t' + 'stack empty, placing ' + char + ' onto stack')
+                    self.debug_print('\t' + 'stack empty, placing onto stack')
                     stack.append(char)
                 # If `char` has a higher precedence than the top of the stack:
                 elif self.prec(char) > self.prec(stack[-1]):
-                    self.debug_print('\t\t' + char + ' has higher precedence, placed onto stack')
+                    self.debug_print('\t' + char + ' has higher precedence, placed onto stack')
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
                     # If we see an open paren, do not pop operators off stack.
                     if char is '(':
                         # Place open paren on stack as a marker
-                        self.debug_print('\t\topen paren found, placing on stack')
+                        self.debug_print('\topen paren found, placing on stack')
                         stack.append(char)
                     elif char is ')':
                         # TODO: What if there is no open paren?
-                        self.debug_print('\t\tclose paren found, pop stack until find open paren')
+                        self.debug_print('\tclose paren found, pop stack until find open paren')
                         while stack and stack[-1] is not '(':
                             post += stack.pop()
                         # Remove open paren
                         stack.pop()
                     else:
                         while stack and self.prec(char) <= self.prec(stack[-1]):
-                            self.debug_print('\t\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
+                            self.debug_print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
                             post += stack.pop()
-                            self.debug_print('\t\t\t' + str(stack))
-                            self.debug_print('\t\t\t' + post)
+                            self.debug_print('\t\t' + str(stack))
+                            self.debug_print('\t\t' + post)
                         stack.append(char)
             else:
-                self.debug_print('\t' + char + ' is literal')
+                self.debug_print(char + ' is literal')
                 post += char
-
+        
         while stack:
             post += stack.pop()
-
+        
         return post
 
     # "We will convert a postﬁx regular expression into an NFA using a stack,
     # where each element on the stack is an NFA."
     def post2nfa(self, post):
         self.debug_print('POST2NFA ---------------------------------')
-        stack = list()
+        stack = []
 
         for idx, char in enumerate(post):
-            if char is '\\':
-                self.debug_print('char is escape')
 
-            # TODO: in2post 
-            elif char is '.':
-                self.debug_print('char is wildcard')
+# -----------------------------------------------------------------------------
+            # e+ matches one or more e's. Notice that we 
+            if char is '+':
+                # Remove the NFA fragment currently on the stack
+                e = stack.pop()
+                # Create a new NFA state in which the first out state is e, the
+                # previous state 
+                s = NfaState( Control.split, e.start, None )
+                # e.out is a OutList, a list of references to other states.
+                # Patch 
+                e.out_list.patch(s)
+                stack.append( NfaFrag(s, s.out1) )
+                self.debug_print(str(stack))
 
-            elif char is '|':
-                #e1 = stack.pop()
-                #e2 = stack.pop()
-                #state = NfaState(Control.split, e1.start, e2.start)
-                #stack.append( NfaFrag(state, state.out) )
-                #self.debug_print(str(stack))
-                self.debug_print('char is pipe')
-
+            # This block builds the start state, and should only be execute
+            # once.
             else:
-                state = NfaState(idx, None, None)
-                stack.append( NfaFrag(state, state.out) )
-                self.debug_print(str(state))
+                s = NfaState(idx, None, None)
+                stack.append( NfaFrag(s, OutList(s.out1)) )
+                self.debug_print( str(stack) )
 
 
     def match(self, str):
