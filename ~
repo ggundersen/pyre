@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# -----------------------------------------------------------------------------
+# nfa.py
+# -----------------------------------------------------------------------------
+
+
+class State:
+    
+    def __init__(self, control, out1, out2, last_list=None):
+        self.control = control
+        # out1 and out2 are `OutList`s, list of references to out states.
+        self.out1 = out1
+        self.out2 = out2
+        self.last_list = last_list
+
+
+class Frag:
+
+    def __init__(self, start, out_list):
+        self.start = start
+        self.out_list = out_list
+
+
+class OutList:
+
+    def __init__(self, out_state):
+        self.lst = [out_state]
+
+    def patch(self, connecting_state):
+        self.lst.out1 = connecting_state
+    
+    @staticmethod
+    def append(out_list1, out_list2):
+        return out_list1 + out_list2

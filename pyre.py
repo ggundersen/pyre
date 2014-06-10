@@ -10,75 +10,49 @@
 # [2] http://swtch.com/~rsc/regexp/regexp1.html
 # [3] http://csis.pace.edu/~wolf/CS122/infix-postfix.htm
 # [4] http://stackoverflow.com/q/60208/1830334
+# [5] http://perl.plover.com/Regex/article.html
+# [6] http://www.codeproject.com/Articles/5412/Writing-own-regular-expression-parser#Seven
 # -----------------------------------------------------------------------------
 
 
 import sys
-from enum import Enum
-
-
-class Control(Enum):
-    split = 256
-    match = 257
-
-
-class NfaState:
-    
-    def __init__(self, control, out1, out2, last_list=None):
-        self.control = control
-        # out1 and out2 are `OutList`s, list of references to out states.
-        self.out1 = out1
-        self.out2 = out2
-        self.last_list = last_list
-
-
-class NfaFrag:
-
-    def __init__(self, start, out_list):
-        self.start = start
-        self.out_list = out_list
-
-
-class OutList:
-
-    def __init__(self, out):
-        self.l = [out]
-
-    def patch(self, state):
-        for ptr in self.l:
-            ptr = state
-
-    def append(self, l2):
-        return self.l + l2
+from nfa import State, Frag, OutList, Metachar
 
 
 class Pyre:
 
+
     def __init__(self, debug=False):
         self.debug = debug
-        self.operators = {
-            '|': 9,
+        self.metachars = {
+            'infix': {
+                '|': 9
+            },
             '*': 8,
             '+': 7,
-            '-': 7,
             '?': 6,
             '^': 5,
             '$': 4,
             '(': 0,
             ')': 0
         }
+        self.list_id = 0
 
-    def debug_print(self, msg):
+    def pprint(self, msg):
         if (self.debug):
             print(msg)
 
+
+    # `compile` sets the instance's `start` property, which is used by the
+    # `match` function.
     def compile(self, re):
-        post = self.in2post(re)
-        self.post2nfa(post)
+        self.start = self.post2nfa( self.in2post(re) )
+
 
     # Calculates operator precedence. See [4]
     def prec(self, char):
-        return self.operators[char]
+        return self.metachars[char]
+
 
     # "...postﬁx notation [is] nice because parentheses are unneeded since [it
     # does] not have the operator-operand ambiguity inherent to inﬁx 
@@ -92,45 +66,43 @@ class Pyre:
 
     # TODO: Should convert implicit concatentation, e.g. AB, into explicit concatentation, e.g. A&B 
     def in2post(self, in_str):
-
-        self.debug_print('IN2POST ---------------------------------')
-
+        #self.pprint('---------- in2post')
         post = ''
         stack = []
 
         for char in in_str:
-            if char in self.operators:
-                self.debug_print(char + ' is in the list of operators')
+            if char in self.metachars['infix']:
+                #self.pprint(char + ' is in the list of operators')
                 if not stack:
-                    self.debug_print('\t' + 'stack empty, placing onto stack')
+                    #self.pprint('\t' + 'stack empty, placing onto stack')
                     stack.append(char)
                 # If `char` has a higher precedence than the top of the stack:
                 elif self.prec(char) > self.prec(stack[-1]):
-                    self.debug_print('\t' + char + ' has higher precedence, placed onto stack')
+                    #self.pprint('\t' + char + ' has higher precedence, placed onto stack')
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
                     # If we see an open paren, do not pop operators off stack.
-                    if char is '(':
+                    if char is self.metachars['(']:
                         # Place open paren on stack as a marker
-                        self.debug_print('\topen paren found, placing on stack')
+                        #self.pprint('\topen paren found, placing on stack')
                         stack.append(char)
-                    elif char is ')':
+                    elif char is self.metachars[')']:
                         # TODO: What if there is no open paren?
-                        self.debug_print('\tclose paren found, pop stack until find open paren')
-                        while stack and stack[-1] is not '(':
+                        #self.pprint('\tclose paren found, pop stack until find open paren')
+                        while stack and stack[-1] is not self.metachars['(']:
                             post += stack.pop()
                         # Remove open paren
                         stack.pop()
                     else:
                         while stack and self.prec(char) <= self.prec(stack[-1]):
-                            self.debug_print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
+                            #self.pprint('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
                             post += stack.pop()
-                            self.debug_print('\t\t' + str(stack))
-                            self.debug_print('\t\t' + post)
+                            #self.pprint('\t\t' + str(stack))
+                            #self.pprint('\t\t' + post)
                         stack.append(char)
             else:
-                self.debug_print(char + ' is literal')
+                #self.pprint(char + ' is literal')
                 post += char
         
         while stack:
@@ -138,42 +110,95 @@ class Pyre:
         
         return post
 
+
     # "We will convert a postﬁx regular expression into an NFA using a stack,
     # where each element on the stack is an NFA."
     def post2nfa(self, post):
-        self.debug_print('POST2NFA ---------------------------------')
+        self.pprint('---------- post2nfa')
+        self.pprint(post)
         stack = []
 
-        for idx, char in enumerate(post):
+        for char in post:
+# -----------------------------------------------------------------------------
+            if char is '+':
+                self.pprint(char)
+
+                # Remove the NFA fragment currently on the stack. This is the
+                # state that we want to repeat. 
+                e = stack.pop()
+                
+                # Create a new NFA state in which the first out state is the
+                # state we want to repeat. This creates the loopback.
+                s = State(Metachar.split, e.start, None)
+
+                # Patch the dangling out states of the previous fragment to the
+                # newly created state. This completes the loop.
+                e.out_list.patch(s)
+                
+                # Add the new fragment onto the stack.
+                stack.append( Frag(s, OutList(s.out1)) )
+                self.pprint(str(stack))
+
+            # Character literals
+            else:
+                self.pprint(char)
+
+                s = State(char, None, None)
+                stack.append( Frag(s, OutList(s.out1)) )
+                self.pprint( str(stack) )
 
 # -----------------------------------------------------------------------------
-            # e+ matches one or more e's. Notice that we 
-            if char is '+':
-                # Remove the NFA fragment currently on the stack. This is the
-                # one that we want to repeat. 
-                e = stack.pop()
-                # Create a new NFA state in which the first out state is e, the
-                # previous state. This represents the loop. 
-                s = NfaState(Control.split, e.start, None)
-                # Patch takes the dangling out states of e and points them to
-                # s. This 'patches' the NFA fragments into a larger fragment. 
-                e.out_list.patch(s)
-                stack.append( NfaFrag(s, s.out1) )
-                self.debug_print(str(stack))
-
-            # This block builds the start state, and should only be execute
-            # once.
-            else:
-                s = NfaState(idx, None, None)
-                stack.append( NfaFrag(s, OutList(s.out1)) )
-                self.debug_print( str(stack) )
+        # In [2] this line of code is a `pop`, but that just shifts the stack
+        # pointer. I don't think we actually want to remove this NFA fragment
+        # from the stack. 
+        e = stack[-1]
+        e.out_list.patch( State(Metachar.match, None, None) )
+        self.pprint(stack)
+        
+        return e.start
 
 
     def match(self, str):
+        self.pprint('---------- match')
+        self.pprint(str)
+        self.pprint(self.start)
+
+        curr_list = self.add_state([], self.start)
+        next_list = list()
+
+        for char in str:
+            self.pprint(char)
+
+            # Swap lists to save on object allocation
+            # This is a premature optimization in my case.
+            temp = curr_list
+            curr_list = next_list
+            next_list = temp
+
+
+    def step(self, curr_list):
         pass
 
 
+    def add_state(self, lst, state):
+        if state == None or state.id == self.list_id:
+            return
+        state.id = self.list_id
+        if (state.char == Metachar.split):
+            add_state(lst, state.out1)
+            add_state(lst, state.out2)
+            return
+        lst.append(state)
+
+    
+    def is_match(self, states):
+        for s in states:
+            if s.char == Metachar.match:
+                return True
+        return False
+
+
 if __name__ == '__main__':
-    pyre = Pyre(debug=sys.argv[2:])
+    pyre = Pyre(debug=sys.argv[3:])
     pyre.compile(sys.argv[1])
-    pyre.match('aab')
+    pyre.match(sys.argv[2])
