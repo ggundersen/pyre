@@ -118,15 +118,12 @@ class Pyre:
     # "We will convert a postﬁx regular expression into an NFA using a stack,
     # where each element on the stack is an NFA."
     def post2nfa(self, post):
-        self.pprint('---------- post2nfa')
-        self.pprint(post)
+        pdb.set_trace()
         stack = []
 
         for char in post:
 # -----------------------------------------------------------------------------
             if char is '+':
-                self.pprint(char)
-
                 # Remove the NFA fragment currently on the stack. This is the
                 # state that we want to repeat. 
                 e = stack.pop()
@@ -141,43 +138,36 @@ class Pyre:
                 
                 # Add the new fragment onto the stack.
                 stack.append( Frag(e.start, s.out1) )
-                self.pprint('print stack frags state char')
-                self.pprint(stack[0].start.char)
+
+            # Concatentation. This is the important step, because it reduces
+            # the number of NFA fragments on the stack.
+            elif char is '&':
+                e2 = stack.pop()
+                e1 = stack.pop()
+                e1.patch(e2.start)
+                stack.append( Frag(e1.start, e2.out_list) )
 
             # Character literals
             else:
-                self.pprint(char)
-
                 s = State(char, None, None)
                 stack.append( Frag(s, s.out1) )
-                self.pprint('print stack frags state char')
-                self.pprint(stack[0].start.char)
 
 # -----------------------------------------------------------------------------
+        pdb.set_trace()
+
         # In [2] this line of code is a `pop`, but that just shifts the stack
         # pointer. I don't think we actually want to remove this NFA fragment
         # from the stack. 
-
-        pdb.set_trace()
-
         e = stack[-1]
         e.patch( State(Metachar.match, None, None) )
-        self.pprint(stack)
-        
         return e.start
 
 
     def match(self, str):
-        self.pprint('---------- match')
-        self.pprint(str)
-        self.pprint(self.start)
-
         curr_list = self.add_state([], self.start)
         next_list = list()
 
         for char in str:
-            self.pprint(char)
-
             # Swap lists to save on object allocation
             # This is a premature optimization in my case.
             temp = curr_list
