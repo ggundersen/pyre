@@ -16,7 +16,9 @@
 
 
 import sys
-from nfa import State, Frag, OutList, Metachar
+import pdb
+
+from nfa import State, Frag, Metachar
 
 
 class Pyre:
@@ -46,7 +48,9 @@ class Pyre:
     # `compile` sets the instance's `start` property, which is used by the
     # `match` function.
     def compile(self, re):
-        self.start = self.post2nfa( self.in2post(re) )
+        pdb.set_trace()
+        #self.start = self.post2nfa( self.in2post(re) )
+        self.start = self.post2nfa(re)
 
 
     # Calculates operator precedence. See [4]
@@ -133,19 +137,21 @@ class Pyre:
 
                 # Patch the dangling out states of the previous fragment to the
                 # newly created state. This completes the loop.
-                e.out_list.patch(s)
+                e.patch(s)
                 
                 # Add the new fragment onto the stack.
-                stack.append( Frag(s, OutList(s.out1)) )
-                self.pprint(str(stack))
+                stack.append( Frag(e.start, s.out1) )
+                self.pprint('print stack frags state char')
+                self.pprint(stack[0].start.char)
 
             # Character literals
             else:
                 self.pprint(char)
 
                 s = State(char, None, None)
-                stack.append( Frag(s, OutList(s.out1)) )
-                self.pprint( str(stack) )
+                stack.append( Frag(s, s.out1) )
+                self.pprint('print stack frags state char')
+                self.pprint(stack[0].start.char)
 
 # -----------------------------------------------------------------------------
         # In [2] this line of code is a `pop`, but that just shifts the stack

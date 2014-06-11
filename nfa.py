@@ -22,23 +22,13 @@ class State:
 
 class Frag:
 
-    def __init__(self, start, out_list):
+    def __init__(self, start, out):
         self.start = start
-        self.out_list = OutList(out_list)
+        self.out_list = [out]
 
-
-class OutList:
-
-    def __init__(self, out_state):
-        self.lst = [out_state]
-
-    def patch(self, next_state):
-        for out_state in self.lst:
-            out_state = next_state
-
-    @staticmethod
-    def append(out_list1, out_list2):
-        return OutList(out_list1 + out_list2)
+    def patch(self, out):
+        for s in self.out_list:
+            s = out
 
 
 class Metachar(Enum):
