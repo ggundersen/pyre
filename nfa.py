@@ -26,9 +26,9 @@ class Frag:
         self.start = start
         self.out_list = [out]
 
-    def patch(self, out):
-        for s in self.out_list:
-            s = out
+    def patch(self, new_out_state):
+        for idx, val in enumerate(self.out_list):
+            self.out_list[idx] = new_out_state
 
 
 class Metachar(Enum):

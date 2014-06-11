@@ -48,7 +48,7 @@ class Pyre:
     # `compile` sets the instance's `start` property, which is used by the
     # `match` function.
     def compile(self, re):
-        pdb.set_trace()
+        #pdb.set_trace()
         #self.start = self.post2nfa( self.in2post(re) )
         self.start = self.post2nfa(re)
 
@@ -157,8 +157,11 @@ class Pyre:
         # In [2] this line of code is a `pop`, but that just shifts the stack
         # pointer. I don't think we actually want to remove this NFA fragment
         # from the stack. 
+
+        pdb.set_trace()
+
         e = stack[-1]
-        e.out_list.patch( State(Metachar.match, None, None) )
+        e.patch( State(Metachar.match, None, None) )
         self.pprint(stack)
         
         return e.start
