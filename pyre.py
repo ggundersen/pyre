@@ -18,7 +18,7 @@
 import sys
 import pdb
 
-from nfa import State, Frag, Metachar
+from nfa import State, Frag, Metachar, Ptr
 
 
 class Pyre:
@@ -126,31 +126,31 @@ class Pyre:
             if char is '+':
                 # Remove the NFA fragment currently on the stack. This is the
                 # state that we want to repeat. 
-                e = stack.pop()
+                f = stack.pop()
                 
                 # Create a new NFA state in which the first out state is the
                 # state we want to repeat. This creates the loopback.
-                s = State(Metachar.split, e.start, None)
+                s = State(Metachar.split, f.start)
 
                 # Patch the dangling out states of the previous fragment to the
                 # newly created state. This completes the loop.
-                e.patch(s)
+                f.patch(s)
                 
                 # Add the new fragment onto the stack.
-                stack.append( Frag(e.start, s.out1) )
+                stack.append( Frag(f.start, [s.out_ptr2]) )
 
             # Concatentation. This is the important step, because it reduces
             # the number of NFA fragments on the stack.
             elif char is '&':
-                e2 = stack.pop()
-                e1 = stack.pop()
-                e1.patch(e2.start)
-                stack.append( Frag(e1.start, e2.out_list) )
+                f2 = stack.pop()
+                f1 = stack.pop()
+                f1.patch(f2.start)
+                stack.append( Frag(f1.start, f2.dangling_ptr_list) )
 
             # Character literals
             else:
-                s = State(char, None, None)
-                stack.append( Frag(s, s.out1) )
+                s = State(char, True)
+                stack.append( Frag(s, [s.out_ptr1]) )
 
 # -----------------------------------------------------------------------------
         pdb.set_trace()
@@ -158,9 +158,9 @@ class Pyre:
         # In [2] this line of code is a `pop`, but that just shifts the stack
         # pointer. I don't think we actually want to remove this NFA fragment
         # from the stack. 
-        e = stack[-1]
-        e.patch( State(Metachar.match, None, None) )
-        return e.start
+        nfa = stack[-1]
+        nfa.patch( State(Metachar.match) )
+        return nfa.start
 
 
     def match(self, str):
