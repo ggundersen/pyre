@@ -180,9 +180,9 @@ class Pyre:
 
         is_a_match = self.is_match(curr_list_ptr)
         if is_a_match:
-            self.pprint(str + ' is in the regular expression ' + self.re_store)
+            print(self.re_store + ' matches ' + str)
         else:
-            self.pprint(str + ' is *not* in the regular expression ' + self.re_store)
+            print(self.re_store + ' does *not* match ' + str)
 
 
     def step(self, curr_list_ptr, char, next_list_ptr):
