@@ -3,17 +3,17 @@
 
 # -----------------------------------------------------------------------------
 # nfa.py
-#
-# TODO: Should this just be an NFA class?
 # -----------------------------------------------------------------------------
 
 
 from enum import Enum
 
+from ptr import Ptr
+
 
 class State:
     
-    def __init__(self, trans, out1=None, out2=None):
+    def __init__(self, trans, out1=None, out2=None, id=None):
         self.trans = trans
         
         # These are either assigned pointers to State instances or they are
@@ -21,6 +21,7 @@ class State:
         # they are neither pointers nor dangling.
         self.out_ptr1 = Ptr(out1)
         self.out_ptr2 = Ptr(out2)
+        self.id = id
 
 
 class Frag:
@@ -38,20 +39,6 @@ class Frag:
             # after setting the pointer.
             self.dangling_ptr_list.remove(ptr)
             
-
-# This simulate a C pointer. It encapsulates the state and the the dangling out
-# pointer. See `Frag.patch` for why this is necessary.
-class Ptr:
-
-    def __init__(self, obj):
-        self.obj = obj
-
-    def get(self):
-        return self.obj
-
-    def set(self, obj):
-        self.obj = obj
-
 
 class Metachar(Enum):
     split = 256

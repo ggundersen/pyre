@@ -18,7 +18,8 @@
 import sys
 import pdb
 
-from nfa import State, Frag, Metachar, Ptr
+from ptr import Ptr
+from nfa import State, Frag, Metachar
 
 
 class Pyre:
@@ -38,7 +39,9 @@ class Pyre:
             '(': 0,
             ')': 0
         }
+        # 
         self.list_id = 0
+
 
     def pprint(self, msg):
         if (self.debug):
@@ -48,9 +51,9 @@ class Pyre:
     # `compile` sets the instance's `start` property, which is used by the
     # `match` function.
     def compile(self, re):
-        #pdb.set_trace()
-        #self.start = self.post2nfa( self.in2post(re) )
-        self.start = self.post2nfa(re)
+        self.re_store = re
+        #self.start_ptr = self.post2nfa( self.in2post(re) )
+        self.start_ptr = self.post2nfa(re)
 
 
     # Calculates operator precedence. See [4]
@@ -67,8 +70,9 @@ class Pyre:
     # wild card. 
     #
     # The algorithm used is from [3].
-
-    # TODO: Should convert implicit concatentation, e.g. AB, into explicit concatentation, e.g. A&B 
+    #
+    # TODO: Should convert implicit concatentation, e.g. AB, into explicit
+    # concatentation, e.g. A&B 
     def in2post(self, in_str):
         #self.pprint('---------- in2post')
         post = ''
@@ -118,11 +122,8 @@ class Pyre:
     # "We will convert a postﬁx regular expression into an NFA using a stack,
     # where each element on the stack is an NFA."
     def post2nfa(self, post):
-        pdb.set_trace()
         stack = []
-
         for char in post:
-# -----------------------------------------------------------------------------
             if char is '+':
                 # Remove the NFA fragment currently on the stack. This is the
                 # state that we want to repeat. 
@@ -152,47 +153,63 @@ class Pyre:
                 s = State(char, True)
                 stack.append( Frag(s, [s.out_ptr1]) )
 
-# -----------------------------------------------------------------------------
-        pdb.set_trace()
-
         # In [2] this line of code is a `pop`, but that just shifts the stack
         # pointer. I don't think we actually want to remove this NFA fragment
         # from the stack. 
         nfa = stack[-1]
         nfa.patch( State(Metachar.match) )
-        return nfa.start
+        return Ptr(nfa.start)
 
-
+    
+    # `match` should only take a string. The start state of the NFA is saved
+    # after the use runs `compile`.
     def match(self, str):
-        curr_list = self.add_state([], self.start)
-        next_list = list()
+        #pdb.set_trace()
+ 
+        curr_list_ptr = Ptr([ self.start_ptr ])
+        next_list_ptr = Ptr([])
 
         for char in str:
-            # Swap lists to save on object allocation
-            # This is a premature optimization in my case.
-            temp = curr_list
-            curr_list = next_list
-            next_list = temp
+            self.step(curr_list_ptr, char, next_list_ptr);
+            # We swap lists because on the next iteration of this loop, we need
+            # `next_list_ptr` to be the current list of states. We then reuse
+            # `curr_list_ptr`.
+            temp = curr_list_ptr
+            curr_list_ptr = next_list_ptr
+            next_list_ptr = temp
+
+        is_a_match = self.is_match(curr_list_ptr)
+        if is_a_match:
+            self.pprint(str + ' is in the regular expression ' + self.re_store)
+        else:
+            self.pprint(str + ' is *not* in the regular expression ' + self.re_store)
 
 
-    def step(self, curr_list):
-        pass
+    def step(self, curr_list_ptr, char, next_list_ptr):
+        self.list_id += 1
+        clist = curr_list_ptr.get()
+        for ptr in clist:
+            state = ptr.get()
+            if state.trans == char:
+                self.add_state(next_list_ptr, state.out_ptr1)
 
 
-    def add_state(self, lst, state):
+    def add_state(self, next_list_ptr, state_ptr):
+        state = state_ptr.get()
         if state == None or state.id == self.list_id:
             return
         state.id = self.list_id
-        if (state.char == Metachar.split):
-            add_state(lst, state.out1)
-            add_state(lst, state.out2)
+        if (state.trans == Metachar.split):
+            self.add_state(next_list_ptr, state.out_ptr1)
+            self.add_state(next_list_ptr, state.out_ptr2)
             return
-        lst.append(state)
+        next_list_ptr.get().append(state_ptr)
 
     
-    def is_match(self, states):
-        for s in states:
-            if s.char == Metachar.match:
+    def is_match(self, states_ptr):
+        states = states_ptr.get()
+        for s_p in states:
+            if s_p.get().trans == Metachar.match:
                 return True
         return False
 
