@@ -42,17 +42,33 @@ class Pyre:
         self.list_id = 0
         self.start_ptr = None
 
-        self.compile(input_re)
+        self.__compile(input_re)
 
+  
+    def match(self, str):
+ 
+        curr_list_ptr = Ptr([ self.start_ptr ])
+        next_list_ptr = Ptr([])
 
-    def pprint(self, msg):
-        if (self.debug):
-            print(msg)
+        for char in str:
+            self.__step(curr_list_ptr, char, next_list_ptr);
+            # We swap lists because on the next iteration of this loop, we need
+            # `next_list_ptr` to be the current list of states. We then reuse
+            # `curr_list_ptr`.
+            temp = curr_list_ptr
+            curr_list_ptr = next_list_ptr
+            next_list_ptr = temp
+
+        is_a_match = self.__is_match(curr_list_ptr)
+        if is_a_match:
+            self.__print(self.re_store + ' matches ' + str)
+        else:
+            self.__print(self.re_store + ' does *not* match ' + str)
 
 
     # TODO: What happens if the client executes `match` twice? Does `start_ptr`
     # need to be reset?
-    def compile(self, input_re):
+    def __compile(self, input_re):
         """Converts a postfix expression to an NFA and sets the start pointer
         for `match`.
 
@@ -61,21 +77,15 @@ class Pyre:
         Returns: void but sets the start pointer for the Pyre instance.
         """
 
-        self.pprint('Compiling ' + input_re)
+        self.__print('Compiling ' + input_re)
         self.re_store = input_re
-        postfix_re = self.in2post(input_re)
-        self.start_ptr = self.post2nfa(postfix_re)
-
-
-    def prec(self, char):
-        """Calculates operator precedence. See [4].
-        """
-        return self.metachars[char]
+        postfix_re = self.__in2post(input_re)
+        self.start_ptr = self.__post2nfa(postfix_re)
 
 
     # TODO: Should convert implicit concatentation, e.g. AB, into explicit
     # concatentation, e.g. A&B 
-    def in2post(self, input_str):
+    def __in2post(self, input_str):
         """Converts an infix expression to a postfix expression.
 
         Why? Postfix notation is useful because parentheses are unneeded since
@@ -97,37 +107,37 @@ class Pyre:
 
         for char in input_str:
             if char in self.metachars['infix']:
-                self.pprint(char + ' is in the list of operators')
+                self.__print(char + ' is in the list of operators')
                 if not stack:
-                    self.pprint('\t' + 'stack empty, placing onto stack')
+                    self.__print('\t' + 'stack empty, placing onto stack')
                     stack.append(char)
                 # If `char` has a higher precedence than the top of the stack:
-                elif self.prec(char) > self.prec(stack[-1]):
-                    self.pprint('\t' + char + ' has higher precedence, placed onto stack')
+                elif self.__prec(char) > self.__prec(stack[-1]):
+                    self.__print('\t' + char + ' has higher precedence, placed onto stack')
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
                     # If we see an open paren, do not pop operators off stack.
                     if char is self.metachars['(']:
                         # Place open paren on stack as a marker
-                        self.pprint('\topen paren found, placing on stack')
+                        self.__print('\topen paren found, placing on stack')
                         stack.append(char)
                     elif char is self.metachars[')']:
                         # TODO: What if there is no open paren?
-                        self.pprint('\tclose paren found, pop stack until find open paren')
+                        self.__print('\tclose paren found, pop stack until find open paren')
                         while stack and stack[-1] is not self.metachars['(']:
                             post += stack.pop()
                         # Remove open paren
                         stack.pop()
                     else:
-                        while stack and self.prec(char) <= self.prec(stack[-1]):
-                            self.pprint('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
+                        while stack and self.__prec(char) <= self.__prec(stack[-1]):
+                            self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
                             post += stack.pop()
-                            self.pprint('\t\t' + str(stack))
-                            self.pprint('\t\t' + post)
+                            self.__print('\t\t' + str(stack))
+                            self.__print('\t\t' + post)
                         stack.append(char)
             else:
-                self.pprint(char + ' is literal')
+                self.__print(char + ' is literal')
                 post += char
         
         while stack:
@@ -136,7 +146,7 @@ class Pyre:
         return post
 
 
-    def post2nfa(self, post):
+    def __post2nfa(self, post):
         """Converts a postfix expression to an NFA.
 
         Args: A postfix expression, e.g. ab+ rather than a+b.
@@ -161,7 +171,7 @@ class Pyre:
                 # Add the new fragment onto the stack.
                 stack.append( Frag(f.start, [s.out_ptr2]) )
 
-            # Concatentation. This is the important step, because it reduces
+            # Concatentation. This is the important __step, because it reduces
             # the number of NFA fragments on the stack.
             elif char is '&':
                 f2 = stack.pop()
@@ -182,54 +192,44 @@ class Pyre:
         return Ptr(nfa.start)
 
     
-    def match(self, str):
- 
-        curr_list_ptr = Ptr([ self.start_ptr ])
-        next_list_ptr = Ptr([])
-
-        for char in str:
-            self.step(curr_list_ptr, char, next_list_ptr);
-            # We swap lists because on the next iteration of this loop, we need
-            # `next_list_ptr` to be the current list of states. We then reuse
-            # `curr_list_ptr`.
-            temp = curr_list_ptr
-            curr_list_ptr = next_list_ptr
-            next_list_ptr = temp
-
-        is_a_match = self.is_match(curr_list_ptr)
-        if is_a_match:
-            print(self.re_store + ' matches ' + str)
-        else:
-            print(self.re_store + ' does *not* match ' + str)
-
-
-    def step(self, curr_list_ptr, char, next_list_ptr):
+    def __step(self, curr_list_ptr, char, next_list_ptr):
         self.list_id += 1
         clist = curr_list_ptr.get()
         for ptr in clist:
             state = ptr.get()
             if state.trans == char:
-                self.add_state(next_list_ptr, state.out_ptr1)
+                self.__add_state(next_list_ptr, state.out_ptr1)
 
 
-    def add_state(self, next_list_ptr, state_ptr):
+    def __add_state(self, next_list_ptr, state_ptr):
         state = state_ptr.get()
         if state == None or state.id == self.list_id:
             return
         state.id = self.list_id
         if (state.trans == Metachar.split):
-            self.add_state(next_list_ptr, state.out_ptr1)
-            self.add_state(next_list_ptr, state.out_ptr2)
+            self.__add_state(next_list_ptr, state.out_ptr1)
+            self.__add_state(next_list_ptr, state.out_ptr2)
             return
         next_list_ptr.get().append(state_ptr)
 
     
-    def is_match(self, states_ptr):
+    def __is_match(self, states_ptr):
         states = states_ptr.get()
         for s_p in states:
             if s_p.get().trans == Metachar.match:
                 return True
         return False
+
+
+    def __prec(self, char):
+        """Calculates operator precedence. See [4].
+        """
+        return self.metachars[char]
+
+
+    def __print(self, msg):
+        if (self.debug):
+            print(msg)
 
 
 if __name__ == '__main__':
