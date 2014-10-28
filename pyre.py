@@ -25,7 +25,7 @@ from nfa import State, Frag, Metachar
 class Pyre:
 
 
-    def __init__(self, debug=False):
+    def __init__(self, input_re, debug=False):
         self.debug = debug
         self.metachars = {
             'infix': {
@@ -40,6 +40,9 @@ class Pyre:
             ')': 0
         }
         self.list_id = 0
+        self.start_ptr = None
+
+        self.compile(input_re)
 
 
     def pprint(self, msg):
@@ -47,33 +50,48 @@ class Pyre:
             print(msg)
 
 
-    # `compile` sets the instance's `start` property, which is used by the
-    # `match` function.
-    def compile(self, re):
-        self.re_store = re
-        #self.start_ptr = self.post2nfa( self.in2post(re) )
-        self.start_ptr = self.post2nfa(re)
+    # TODO: What happens if the client executes `match` twice? Does `start_ptr`
+    # need to be reset?
+    def compile(self, input_re):
+        """Converts a postfix expression to an NFA and sets the start pointer
+        for `match`.
+
+        Args: `re`, an infix expression.
+
+        Returns: void but sets the start pointer for the Pyre instance.
+        """
+
+        self.pprint('Compiling ' + input_re)
+        self.re_store = input_re
+        postfix_re = self.in2post(input_re)
+        self.start_ptr = self.post2nfa(postfix_re)
 
 
-    # Calculates operator precedence. See [4]
     def prec(self, char):
+        """Calculates operator precedence. See [4].
+        """
         return self.metachars[char]
 
 
-    # "...postﬁx notation [is] nice because parentheses are unneeded since [it
-    # does] not have the operator-operand ambiguity inherent to inﬁx 
-    # expressions."[1]
-    #
-    # We will use the "&" symbol as an explicit concatentation operator. Ken
-    # Thompson originally used the "."[2] but we want to use the dot as a wild
-    # card. 
-    #
-    # The algorithm used is from [3].
-    #
     # TODO: Should convert implicit concatentation, e.g. AB, into explicit
     # concatentation, e.g. A&B 
     def in2post(self, input_str):
-        #self.pprint('---------- in2post')
+        """Converts an infix expression to a postfix expression.
+
+        Why? Postfix notation is useful because parentheses are unneeded since
+        the notation does not have the operator-operand ambiguity inherent to
+        inﬁx expressions [1].
+
+        We will use "&" for an explicit concatentation operator. Ken Thompson
+        originally used "."[2], but we want to use the dot as a wild card. 
+
+        This function's algorithm is from [3].
+
+        Args: An infix expression, e.g. a+b.
+
+        Returns: A postfix expression converted from the input, e.g. ab+.
+        """
+
         post = ''
         stack = []
 
@@ -118,16 +136,20 @@ class Pyre:
         return post
 
 
-    # "We will convert a postﬁx regular expression into an NFA using a stack,
-    # where each element on the stack is an NFA."
     def post2nfa(self, post):
+        """Converts a postfix expression to an NFA.
+
+        Args: A postfix expression, e.g. ab+ rather than a+b.
+
+        Returns: A pointer to the NFA start state.
+        """
         stack = []
         for char in post:
             if char is '+':
                 # Remove the NFA fragment currently on the stack. This is the
                 # state that we want to repeat. 
                 f = stack.pop()
-                
+  
                 # Create a new NFA state in which the first out state is the
                 # state we want to repeat. This creates the loopback.
                 s = State(Metachar.split, f.start)
@@ -160,10 +182,7 @@ class Pyre:
         return Ptr(nfa.start)
 
     
-    # `match` should only take a string. The start state of the NFA is saved
-    # after the use runs `compile`.
     def match(self, str):
-        #pdb.set_trace()
  
         curr_list_ptr = Ptr([ self.start_ptr ])
         next_list_ptr = Ptr([])
@@ -177,7 +196,6 @@ class Pyre:
             curr_list_ptr = next_list_ptr
             next_list_ptr = temp
 
-        pdb.set_trace()
         is_a_match = self.is_match(curr_list_ptr)
         if is_a_match:
             print(self.re_store + ' matches ' + str)
@@ -215,11 +233,10 @@ class Pyre:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 3:
-        use_debug = sys.argv[3:]
+    if len(sys.argv) == 4:
+        use_debug = (sys.argv[3] == 'True')
     else:
         use_debug = False
 
-    pyre = Pyre(use_debug)
-    pyre.compile(sys.argv[1])
+    pyre = Pyre(sys.argv[1], use_debug)
     pyre.match(sys.argv[2])
