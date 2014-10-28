@@ -39,7 +39,6 @@ class Pyre:
             '(': 0,
             ')': 0
         }
-        # 
         self.list_id = 0
 
 
@@ -65,52 +64,52 @@ class Pyre:
     # does] not have the operator-operand ambiguity inherent to inﬁx 
     # expressions."[1]
     #
-    # We will use the "&" symbol as an explicit concatentation operator.
-    # Ken Thompson originally used the "."[2] but we want to use the dot as a
-    # wild card. 
+    # We will use the "&" symbol as an explicit concatentation operator. Ken
+    # Thompson originally used the "."[2] but we want to use the dot as a wild
+    # card. 
     #
     # The algorithm used is from [3].
     #
     # TODO: Should convert implicit concatentation, e.g. AB, into explicit
     # concatentation, e.g. A&B 
-    def in2post(self, in_str):
+    def in2post(self, input_str):
         #self.pprint('---------- in2post')
         post = ''
         stack = []
 
-        for char in in_str:
+        for char in input_str:
             if char in self.metachars['infix']:
-                #self.pprint(char + ' is in the list of operators')
+                self.pprint(char + ' is in the list of operators')
                 if not stack:
-                    #self.pprint('\t' + 'stack empty, placing onto stack')
+                    self.pprint('\t' + 'stack empty, placing onto stack')
                     stack.append(char)
                 # If `char` has a higher precedence than the top of the stack:
                 elif self.prec(char) > self.prec(stack[-1]):
-                    #self.pprint('\t' + char + ' has higher precedence, placed onto stack')
+                    self.pprint('\t' + char + ' has higher precedence, placed onto stack')
                     stack.append(char)
                 # If `char` has a lower precedence:
                 else:
                     # If we see an open paren, do not pop operators off stack.
                     if char is self.metachars['(']:
                         # Place open paren on stack as a marker
-                        #self.pprint('\topen paren found, placing on stack')
+                        self.pprint('\topen paren found, placing on stack')
                         stack.append(char)
                     elif char is self.metachars[')']:
                         # TODO: What if there is no open paren?
-                        #self.pprint('\tclose paren found, pop stack until find open paren')
+                        self.pprint('\tclose paren found, pop stack until find open paren')
                         while stack and stack[-1] is not self.metachars['(']:
                             post += stack.pop()
                         # Remove open paren
                         stack.pop()
                     else:
                         while stack and self.prec(char) <= self.prec(stack[-1]):
-                            #self.pprint('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
+                            self.pprint('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
                             post += stack.pop()
-                            #self.pprint('\t\t' + str(stack))
-                            #self.pprint('\t\t' + post)
+                            self.pprint('\t\t' + str(stack))
+                            self.pprint('\t\t' + post)
                         stack.append(char)
             else:
-                #self.pprint(char + ' is literal')
+                self.pprint(char + ' is literal')
                 post += char
         
         while stack:
@@ -178,6 +177,7 @@ class Pyre:
             curr_list_ptr = next_list_ptr
             next_list_ptr = temp
 
+        pdb.set_trace()
         is_a_match = self.is_match(curr_list_ptr)
         if is_a_match:
             print(self.re_store + ' matches ' + str)
@@ -215,6 +215,11 @@ class Pyre:
 
 
 if __name__ == '__main__':
-    pyre = Pyre(debug=sys.argv[3:])
+    if len(sys.argv) == 3:
+        use_debug = sys.argv[3:]
+    else:
+        use_debug = False
+
+    pyre = Pyre(use_debug)
     pyre.compile(sys.argv[1])
     pyre.match(sys.argv[2])
