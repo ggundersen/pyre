@@ -29,7 +29,7 @@ class Pyre:
         self.debug = debug
         self.metachars = {
             'infix': {
-                '&': 9,
+                '.': 9,
                 '|': 9
             },
             '*': 8,
@@ -86,8 +86,8 @@ class Pyre:
         self.start_ptr = self.__post2nfa(postfix_re)
 
 
-    # TODO: Should convert implicit concatentation, e.g. AB, into explicit
-    # concatentation, e.g. A&B 
+    # TODO: Should convert implicit concatentation, e.g. "ab", into explicit
+    # concatentation, e.g. "a.b". 
     def __in2post(self, input_str):
         """Converts an infix expression to a postfix expression.
 
@@ -121,24 +121,24 @@ class Pyre:
                 # If `char` has a lower precedence:
                 else:
                     # If we see an open paren, do not pop operators off stack.
-                    if char is self.metachars['(']:
-                        # Place open paren on stack as a marker
-                        self.__print('\topen paren found, placing on stack')
-                        stack.append(char)
-                    elif char is self.metachars[')']:
-                        # TODO: What if there is no open paren?
-                        self.__print('\tclose paren found, pop stack until find open paren')
-                        while stack and stack[-1] is not self.metachars['(']:
-                            post += stack.pop()
-                        # Remove open paren
-                        stack.pop()
-                    else:
-                        while stack and self.__prec(char) <= self.__prec(stack[-1]):
-                            self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
-                            post += stack.pop()
-                            self.__print('\t\t' + str(stack))
-                            self.__print('\t\t' + post)
-                        stack.append(char)
+                    #if char is self.metachars['(']:
+                    #    # Place open paren on stack as a marker
+                    #    self.__print('\topen paren found, placing on stack')
+                    #    stack.append(char)
+                    #elif char is self.metachars[')']:
+                    #    # TODO: What if there is no open paren?
+                    #    self.__print('\tclose paren found, pop stack until find open paren')
+                    #    while stack and stack[-1] is not self.metachars['(']:
+                    #        post += stack.pop()
+                    #    # Remove open paren
+                    #    stack.pop()
+                    #else:
+                    while stack and self.__prec(char) <= self.__prec(stack[-1]):
+                        self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
+                        post += stack.pop()
+                        self.__print('\t\t' + str(stack))
+                        self.__print('\t\t' + post)
+                    stack.append(char)
             else:
                 self.__print(char + ' is literal')
                 post += char
@@ -176,7 +176,7 @@ class Pyre:
 
             # Concatentation. This is the important step, because it reduces
             # the number of NFA fragments on the stack.
-            elif char is '&':
+            elif char is '.':
                 f2 = stack.pop()
                 f1 = stack.pop()
                 f1.patch(f2.start)
@@ -227,7 +227,10 @@ class Pyre:
     def __prec(self, char):
         """Calculates operator precedence. See [4].
         """
-        return self.metachars[char]
+        if char in self.metachars['infix']:
+            return self.metachars['infix'][char]
+        else:
+            return self.metachars['infix'][char]
 
 
     def __print(self, msg):
