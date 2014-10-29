@@ -3,7 +3,7 @@
 
 # -----------------------------------------------------------------------------
 # pyre.py
-# A Python implementation of regular expressions.
+# A Python implementation of a regular expression engine.
 #
 # See:
 # [1] http://ezekiel.vancouver.wsu.edu/~cs317/archive/projects/grep/grep.pdf
@@ -29,6 +29,7 @@ class Pyre:
         self.debug = debug
         self.metachars = {
             'infix': {
+                '&': 9,
                 '|': 9
             },
             '*': 8,
@@ -61,9 +62,9 @@ class Pyre:
 
         is_a_match = self.__is_match(curr_list_ptr)
         if is_a_match:
-            self.__print(self.re_store + ' matches ' + str)
+            print(self.re_store + ' matches ' + str)
         else:
-            self.__print(self.re_store + ' does *not* match ' + str)
+            print(self.re_store + ' does *not* match ' + str)
 
 
     # TODO: What happens if the client executes `match` twice? Does `start_ptr`
@@ -77,9 +78,11 @@ class Pyre:
         Returns: void but sets the start pointer for the Pyre instance.
         """
 
-        self.__print('Compiling ' + input_re)
+        self.__print('\n\nPYRE\n====\n')
+        self.__print('Compiling infix expression: ' + input_re)
         self.re_store = input_re
         postfix_re = self.__in2post(input_re)
+        self.__print('Postfix expression generated: ' + postfix_re)
         self.start_ptr = self.__post2nfa(postfix_re)
 
 
@@ -171,7 +174,7 @@ class Pyre:
                 # Add the new fragment onto the stack.
                 stack.append( Frag(f.start, [s.out_ptr2]) )
 
-            # Concatentation. This is the important __step, because it reduces
+            # Concatentation. This is the important step, because it reduces
             # the number of NFA fragments on the stack.
             elif char is '&':
                 f2 = stack.pop()
@@ -233,10 +236,12 @@ class Pyre:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 4:
-        use_debug = (sys.argv[3] == 'True')
-    else:
-        use_debug = False
 
-    pyre = Pyre(sys.argv[1], use_debug)
+    # Default to True for now.
+    #if len(sys.argv) == 4:
+    #    use_debug = (sys.argv[3] == 'True')
+    #else:
+    #    use_debug = False
+
+    pyre = Pyre(sys.argv[1], True)
     pyre.match(sys.argv[2])
