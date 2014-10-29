@@ -105,10 +105,6 @@ class Pyre:
             if char in self.operators:
                 self.__print(char + ' is in the list of operators')
 
-                #if len(stack) > 0 and stack[-1] is '&':
-                #    self.__print('\t finish concatenation before proceeding')
-                #    post += stack.pop()
-
                 if len(stack) == 0:
                     self.__print('\t stack empty, placing onto stack')
                     stack.append(char)
@@ -121,7 +117,7 @@ class Pyre:
                     # "+" on the stack and then place "*" on top. When we pop
                     # the stack at end of this function, we'll reverse those
                     # two to produce "ABC*+".
-                    self.__print('\t' + char + ' has higher precedence than ' + stack[-1] + ', placed onto stack')
+                    self.__print('\t' + char + ' has higher precedence than ' + stack[-1] + '; ' + char + ' placed onto stack')
                     stack.append(char)
 
                 # If `char` has a lower precedence:
