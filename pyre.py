@@ -27,18 +27,11 @@ class Pyre:
 
     def __init__(self, input_re, debug=False):
         self.debug = debug
-        self.metachars = {
-            'infix': {
-                '.': 9,
-                '|': 9
-            },
-            '*': 8,
-            '+': 7,
-            '?': 6,
-            '^': 5,
-            '$': 4,
-            '(': 0,
-            ')': 0
+        self.operators = {
+            '|': 9,
+            '&': 8,
+            '*': 7,
+            '+': 6
         }
         self.list_id = 0
         self.start_ptr = None
@@ -64,7 +57,7 @@ class Pyre:
         if is_a_match:
             print(self.re_store + ' matches ' + str)
         else:
-            print(self.re_store + ' does *not* match ' + str)
+            print(self.re_store + ' does not match ' + str)
 
 
     # TODO: What happens if the client executes `match` twice? Does `start_ptr`
@@ -78,11 +71,11 @@ class Pyre:
         Returns: void but sets the start pointer for the Pyre instance.
         """
 
-        self.__print('\n\nPYRE\n====\n')
-        self.__print('Compiling infix expression: ' + input_re)
+        self.__print('\npyre\n====\n')
+        self.__print('compiling infix expression: ' + input_re)
         self.re_store = input_re
         postfix_re = self.__in2post(input_re)
-        self.__print('Postfix expression generated: ' + postfix_re)
+        self.__print('postfix expression generated: ' + postfix_re)
         self.start_ptr = self.__post2nfa(postfix_re)
 
 
@@ -109,40 +102,68 @@ class Pyre:
         stack = []
 
         for char in input_str:
-            if char in self.metachars['infix']:
+            if char in self.operators:
                 self.__print(char + ' is in the list of operators')
-                if not stack:
-                    self.__print('\t' + 'stack empty, placing onto stack')
+
+                #if len(stack) > 0 and stack[-1] is '&':
+                #    self.__print('\t finish concatenation before proceeding')
+                #    post += stack.pop()
+
+                if len(stack) == 0:
+                    self.__print('\t stack empty, placing onto stack')
                     stack.append(char)
+
                 # If `char` has a higher precedence than the top of the stack:
                 elif self.__prec(char) > self.__prec(stack[-1]):
-                    self.__print('\t' + char + ' has higher precedence, placed onto stack')
+                    # Place the new operator on the stack so that it will come
+                    # first after the stack is popped. For example, if the
+                    # input is A+B*C, and we are parsing the "*", we should see
+                    # "+" on the stack and then place "*" on top. When we pop
+                    # the stack at end of this function, we'll reverse those
+                    # two to produce "ABC*+".
+                    self.__print('\t' + char + ' has higher precedence than ' + stack[-1] + ', placed onto stack')
                     stack.append(char)
+
                 # If `char` has a lower precedence:
                 else:
+                    self.__print('\t' + char + 'has lower precedence than ' + stack[-1])
                     # If we see an open paren, do not pop operators off stack.
-                    #if char is self.metachars['(']:
-                    #    # Place open paren on stack as a marker
-                    #    self.__print('\topen paren found, placing on stack')
-                    #    stack.append(char)
-                    #elif char is self.metachars[')']:
-                    #    # TODO: What if there is no open paren?
-                    #    self.__print('\tclose paren found, pop stack until find open paren')
-                    #    while stack and stack[-1] is not self.metachars['(']:
-                    #        post += stack.pop()
-                    #    # Remove open paren
-                    #    stack.pop()
-                    #else:
-                    while stack and self.__prec(char) <= self.__prec(stack[-1]):
-                        self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
-                        post += stack.pop()
-                        self.__print('\t\t' + str(stack))
-                        self.__print('\t\t' + post)
-                    stack.append(char)
+                    if char is '(':
+                        # Place open paren on stack as a marker
+                        self.__print('\topen paren found, placing on stack')
+                        stack.append(char)
+                    elif char is ')':
+                        # TODO: What if there is no open paren?
+                        self.__print('\tclose paren found, pop stack until find open paren')
+                        while stack and stack[-1] is not self.metachars['(']:
+                            post += stack.pop()
+                        # Remove open paren
+                        stack.pop()
+                    else:
+                        while stack and self.__prec(char) <= self.__prec(stack[-1]):
+                            self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
+                            post += stack.pop()
+                            self.__print('\t\t' + str(stack))
+                            self.__print('\t\t' + post)
+                        stack.append(char)
             else:
-                self.__print(char + ' is literal')
-                post += char
-        
+                self.__print(char + ' is a literal')
+                if len(stack) >= 1 and stack[-1] is '&':
+                    self.__print('\t previous operator was explicit concatenation... adding to string')
+                    post += stack.pop() + char
+                    self.__print('\t ' + post)
+                    # This new character needs its own explicit concatenation.
+                    stack.append('&')
+                
+                # Handle conversion of implicit to explicit concatenation.
+                else:
+                    if post == '':
+                        post += char
+                    else:
+                        self.__print('\t explicit concatenation')
+                        stack.append('&')
+                        post += char
+
         while stack:
             post += stack.pop()
         
@@ -227,10 +248,7 @@ class Pyre:
     def __prec(self, char):
         """Calculates operator precedence. See [4].
         """
-        if char in self.metachars['infix']:
-            return self.metachars['infix'][char]
-        else:
-            return self.metachars['infix'][char]
+        return self.operators[char]
 
 
     def __print(self, msg):
@@ -239,7 +257,6 @@ class Pyre:
 
 
 if __name__ == '__main__':
-
     # Default to True for now.
     #if len(sys.argv) == 4:
     #    use_debug = (sys.argv[3] == 'True')
