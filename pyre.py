@@ -28,8 +28,8 @@ class Pyre:
     def __init__(self, input_re, debug=False):
         self.debug = debug
         self.operators = {
-            '|': 9,
-            '&': 8,
+            '&': 9,
+            '|': 8,
             '*': 7,
             '+': 6
         }
@@ -108,6 +108,7 @@ class Pyre:
                 if len(stack) == 0:
                     self.__print('\t stack empty, placing onto stack')
                     stack.append(char)
+                    self.__print('\t stack: ' + str(stack))
 
                 # If `char` has a higher precedence than the top of the stack:
                 elif self.__prec(char) > self.__prec(stack[-1]):
@@ -119,10 +120,11 @@ class Pyre:
                     # two to produce "ABC*+".
                     self.__print('\t' + char + ' has higher precedence than ' + stack[-1] + '; ' + char + ' placed onto stack')
                     stack.append(char)
+                    self.__print('\t stack: ' + str(stack))
 
                 # If `char` has a lower precedence:
                 else:
-                    self.__print('\t' + char + 'has lower precedence than ' + stack[-1])
+                    self.__print('\t' + char + ' has lower precedence than ' + stack[-1])
                     # If we see an open paren, do not pop operators off stack.
                     if char is '(':
                         # Place open paren on stack as a marker
@@ -139,26 +141,25 @@ class Pyre:
                         while stack and self.__prec(char) <= self.__prec(stack[-1]):
                             self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
                             post += stack.pop()
-                            self.__print('\t\t' + str(stack))
-                            self.__print('\t\t' + post)
+                            self.__print('\t\tstack: ' + str(stack))
+                            self.__print('\t\tpostfix: ' + post)
                         stack.append(char)
             else:
                 self.__print(char + ' is a literal')
-                if len(stack) >= 1 and stack[-1] is '&':
-                    self.__print('\t previous operator was explicit concatenation... adding to string')
-                    post += stack.pop() + char
-                    self.__print('\t ' + post)
-                    # This new character needs its own explicit concatenation.
-                    stack.append('&')
+                #if len(stack) >= 1 and stack[-1] is '&':
+                #    self.__print('\t previous operator was explicit concatenation... adding to string')
+                #    post += stack.pop() + char
+                #    self.__print('\t ' + post)
+                #    # This new character needs its own explicit concatenation.
+                #    stack.append('&')
                 
                 # Handle conversion of implicit to explicit concatenation.
-                else:
-                    if post == '':
-                        post += char
-                    else:
-                        self.__print('\t explicit concatenation')
-                        stack.append('&')
-                        post += char
+                #else:
+                self.__print('\texplicit concatenation')
+                if post != '' and post[-1] not in self.operators:
+                    self.__print('\tadding & to stack')
+                    stack.append('&')
+                post += char
 
         while stack:
             post += stack.pop()
