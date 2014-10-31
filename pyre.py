@@ -5,7 +5,6 @@
 # pyre.py
 # A Python implementation of a regular expression engine.
 #
-# See:
 # [1] http://ezekiel.vancouver.wsu.edu/~cs317/archive/projects/grep/grep.pdf
 # [2] http://swtch.com/~rsc/regexp/regexp1.html
 # [3] http://csis.pace.edu/~wolf/CS122/infix-postfix.htm
@@ -39,13 +38,21 @@ class Pyre:
         self.__compile(input_re)
 
   
-    def match(self, str):
- 
+    def match(self, string_to_match):
+        """TODO docstring.
+        """
+
+        # Initialize the `curr_list_ptr` to point to a list with a single
+        # pointer, the start state.
         curr_list_ptr = Ptr([ self.start_ptr ])
+        
+        # Empty until set in `__step()`.
         next_list_ptr = Ptr([])
 
-        for char in str:
-            self.__step(curr_list_ptr, char, next_list_ptr);
+        pdb.set_trace()
+
+        for char in string_to_match:
+            self.__step(curr_list_ptr, char, next_list_ptr)
             # We swap lists because on the next iteration of this loop, we need
             # `next_list_ptr` to be the current list of states. We then reuse
             # `curr_list_ptr`.
@@ -53,11 +60,69 @@ class Pyre:
             curr_list_ptr = next_list_ptr
             next_list_ptr = temp
 
-        is_a_match = self.__is_match(curr_list_ptr)
-        if is_a_match:
-            print(self.re_store + ' matches ' + str)
+        if self.__has_match(curr_list_ptr):
+            print(self.re_store + ' matches ' + string_to_match)
         else:
-            print(self.re_store + ' does not match ' + str)
+            print(self.re_store + ' does not match ' + string_to_match)
+
+
+    def __step(self, curr_list_ptr, char, next_list_ptr):
+        """Advances the NFA simulation a single character. It uses the current
+        list of pointers to calculate the next. Notice that it passes
+        `next_list_ptr` into `__add_state()`.
+        """
+
+        self.list_id += 1
+        curr_list = curr_list_ptr.get()
+        for ptr in curr_list:
+            state = ptr.get()
+
+            # If the current state's transition is the same as the character
+            # being parsed:
+            if state.trans == char:
+                self.__add_state(next_list_ptr, state.out_ptr1)
+
+            #elif state.trans == Metachar.split:
+            #    s1 = state.out_ptr1.get()
+            #    s2 = state.out_ptr2.get()
+            #    if s1.trans == char:
+            #        self.__add_state(next_list_ptr, state.out_ptr1)
+            #    elif s2.trans == char:
+            #        self.__add_state(next_list_ptr, state.out_ptr2)
+
+
+    def __add_state(self, list_ptr, state_ptr):
+        """Adds a state pointer to a list of state pointers but only if the
+        state was not previously added.
+        """
+
+        state = state_ptr.get()
+
+        # `id` prevents us from adding a state more than once to the same list.
+        if state == None or state.id == self.list_id:
+            return
+        state.id = self.list_id
+        if state.trans == Metachar.split:
+            self.__add_state(list_ptr, state.out_ptr1)
+            self.__add_state(list_ptr, state.out_ptr2)
+            return
+        list_ptr.get().append(state_ptr)
+
+
+    def __has_match(self, list_ptr):
+        """Checks a list of state pointers for a transition that is `match`; in
+        other words, leads to an accepting state.
+
+        Args: `list_ptr`, a list of state pointers.
+
+        Returns: True or False based on the condition above.
+        """
+
+        states = list_ptr.get()
+        for state_ptr in states:
+            if state_ptr.get().trans == Metachar.match:
+                return True
+        return False
 
 
     # TODO: What happens if the client executes `match` twice? Does `start_ptr`
@@ -79,8 +144,6 @@ class Pyre:
         self.start_ptr = self.__post2nfa(postfix_re)
 
 
-    # TODO: Should convert implicit concatentation, e.g. "ab", into explicit
-    # concatentation, e.g. "a.b". 
     def __in2post(self, input_str):
         """Converts an infix expression to a postfix expression.
 
@@ -145,16 +208,8 @@ class Pyre:
                             self.__print('\t\tpostfix: ' + post)
                         stack.append(char)
             else:
-                self.__print(char + ' is a literal')
-                #if len(stack) >= 1 and stack[-1] is '&':
-                #    self.__print('\t previous operator was explicit concatenation... adding to string')
-                #    post += stack.pop() + char
-                #    self.__print('\t ' + post)
-                #    # This new character needs its own explicit concatenation.
-                #    stack.append('&')
-                
                 # Handle conversion of implicit to explicit concatenation.
-                #else:
+                self.__print(char + ' is a literal')
                 self.__print('\texplicit concatenation')
                 if post != '' and post[-1] not in self.operators:
                     self.__print('\tadding & to stack')
@@ -174,6 +229,7 @@ class Pyre:
 
         Returns: A pointer to the NFA start state.
         """
+
         stack = []
         for char in post:
             if char is '+':
@@ -194,61 +250,44 @@ class Pyre:
 
             # Concatentation. This is the important step, because it reduces
             # the number of NFA fragments on the stack.
-            elif char is '.':
+            elif char is '&':
                 f2 = stack.pop()
                 f1 = stack.pop()
                 f1.patch(f2.start)
                 stack.append( Frag(f1.start, f2.dangling_ptr_list) )
 
+            # Boolean "or". We create a new NFA fragment with two out pointers,
+            # one to each start state of the previous two fragments.
+            elif char is '|':
+                f2 = stack.pop()
+                f1 = stack.pop()
+                s = State(Metachar.split, f1.start, f2.start)
+                stack.append( Frag(s, f1.dangling_ptr_list + f2.dangling_ptr_list) )
+
             # Character literals
             else:
+                # We pass in `True` to capture a value, i.e. we cannot point to
+                # null.
                 s = State(char, True)
                 stack.append( Frag(s, [s.out_ptr1]) )
 
-        # In [2] this line of code is a `pop`, but that just shifts the stack
-        # pointer. I don't think we actually want to remove this NFA fragment
-        # from the stack. 
-        nfa = stack[-1]
+        # There should be only one fragment on the stack.
+        nfa = stack.pop()
         nfa.patch( State(Metachar.match) )
         return Ptr(nfa.start)
 
     
-    def __step(self, curr_list_ptr, char, next_list_ptr):
-        self.list_id += 1
-        clist = curr_list_ptr.get()
-        for ptr in clist:
-            state = ptr.get()
-            if state.trans == char:
-                self.__add_state(next_list_ptr, state.out_ptr1)
-
-
-    def __add_state(self, next_list_ptr, state_ptr):
-        state = state_ptr.get()
-        if state == None or state.id == self.list_id:
-            return
-        state.id = self.list_id
-        if (state.trans == Metachar.split):
-            self.__add_state(next_list_ptr, state.out_ptr1)
-            self.__add_state(next_list_ptr, state.out_ptr2)
-            return
-        next_list_ptr.get().append(state_ptr)
-
-    
-    def __is_match(self, states_ptr):
-        states = states_ptr.get()
-        for s_p in states:
-            if s_p.get().trans == Metachar.match:
-                return True
-        return False
-
-
-    def __prec(self, char):
+    def __prec(self, operator):
         """Calculates operator precedence. See [4].
+
+        Returns: the a number that represents the precedence of the operator.
         """
-        return self.operators[char]
+        return self.operators[operator]
 
 
     def __print(self, msg):
+        """Prints only in debug mode.
+        """
         if (self.debug):
             print(msg)
 
