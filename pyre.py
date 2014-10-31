@@ -5,12 +5,13 @@
 # pyre.py
 # A Python implementation of a regular expression engine.
 #
-# [1] http://ezekiel.vancouver.wsu.edu/~cs317/archive/projects/grep/grep.pdf
-# [2] http://swtch.com/~rsc/regexp/regexp1.html
-# [3] http://csis.pace.edu/~wolf/CS122/infix-postfix.htm
-# [4] http://stackoverflow.com/q/60208/1830334
-# [5] http://perl.plover.com/Regex/article.html
-# [6] http://www.codeproject.com/Articles/5412/Writing-own-regular-expression-parser#Seven
+# [1]  http://ezekiel.vancouver.wsu.edu/~cs317/archive/projects/grep/grep.pdf
+# [2]  http://swtch.com/~rsc/regexp/regexp1.html
+# [2b] https://code.google.com/p/re1/source/browse/
+# [3]  http://csis.pace.edu/~wolf/CS122/infix-postfix.htm
+# [4]  http://stackoverflow.com/q/60208/1830334
+# [5]  http://perl.plover.com/Regex/article.html
+# [6]  http://www.codeproject.com/Articles/5412/Writing-own-regular-expression-parser#Seven
 # -----------------------------------------------------------------------------
 
 
@@ -44,15 +45,20 @@ class Pyre:
 
         # Initialize the `curr_list_ptr` to point to a list with a single
         # pointer, the start state.
-        curr_list_ptr = Ptr([ self.start_ptr ])
+        
+        #curr_list_ptr = Ptr([ self.start_ptr ])
+        curr_list_ptr = self.__start_list(Ptr([]), self.start_ptr)
         
         # Empty until set in `__step()`.
         next_list_ptr = Ptr([])
 
-        pdb.set_trace()
-
         for char in string_to_match:
+
+            #if char == 'r':
+            #    pdb.set_trace()
+
             self.__step(curr_list_ptr, char, next_list_ptr)
+
             # We swap lists because on the next iteration of this loop, we need
             # `next_list_ptr` to be the current list of states. We then reuse
             # `curr_list_ptr`.
@@ -64,6 +70,18 @@ class Pyre:
             print(self.re_store + ' matches ' + string_to_match)
         else:
             print(self.re_store + ' does not match ' + string_to_match)
+
+    
+    def __start_list(self, list_ptr, start_ptr):
+        """Initializes the pointer list. Importantly, by calling `add_state()`
+        immediately, it handles a split at the beginning of the regular
+        expression.
+        """
+
+        start_ptr.get().id = 0
+        self.list_id += 1
+        self.__add_state(list_ptr, start_ptr)
+        return list_ptr
 
 
     def __step(self, curr_list_ptr, char, next_list_ptr):
@@ -82,14 +100,6 @@ class Pyre:
             if state.trans == char:
                 self.__add_state(next_list_ptr, state.out_ptr1)
 
-            #elif state.trans == Metachar.split:
-            #    s1 = state.out_ptr1.get()
-            #    s2 = state.out_ptr2.get()
-            #    if s1.trans == char:
-            #        self.__add_state(next_list_ptr, state.out_ptr1)
-            #    elif s2.trans == char:
-            #        self.__add_state(next_list_ptr, state.out_ptr2)
-
 
     def __add_state(self, list_ptr, state_ptr):
         """Adds a state pointer to a list of state pointers but only if the
@@ -99,7 +109,8 @@ class Pyre:
         state = state_ptr.get()
 
         # `id` prevents us from adding a state more than once to the same list.
-        if state == None or state.id == self.list_id:
+        # If `state` is `True`, it just is a dangling pointer.
+        if state == None or state == True or state.id == self.list_id:
             return
         state.id = self.list_id
         if state.trans == Metachar.split:
@@ -136,11 +147,11 @@ class Pyre:
         Returns: void but sets the start pointer for the Pyre instance.
         """
 
-        self.__print('\npyre\n====\n')
-        self.__print('compiling infix expression: ' + input_re)
+        #self.__print('\npyre\n====\n')
+        #self.__print('compiling infix expression: ' + input_re)
         self.re_store = input_re
         postfix_re = self.__in2post(input_re)
-        self.__print('postfix expression generated: ' + postfix_re)
+        #self.__print('postfix expression generated: ' + postfix_re)
         self.start_ptr = self.__post2nfa(postfix_re)
 
 
@@ -166,12 +177,12 @@ class Pyre:
 
         for char in input_str:
             if char in self.operators:
-                self.__print(char + ' is in the list of operators')
+                #self.__print(char + ' is in the list of operators')
 
                 if len(stack) == 0:
-                    self.__print('\t stack empty, placing onto stack')
+                    #self.__print('\t stack empty, placing onto stack')
                     stack.append(char)
-                    self.__print('\t stack: ' + str(stack))
+                    #self.__print('\t stack: ' + str(stack))
 
                 # If `char` has a higher precedence than the top of the stack:
                 elif self.__prec(char) > self.__prec(stack[-1]):
@@ -181,38 +192,38 @@ class Pyre:
                     # "+" on the stack and then place "*" on top. When we pop
                     # the stack at end of this function, we'll reverse those
                     # two to produce "ABC*+".
-                    self.__print('\t' + char + ' has higher precedence than ' + stack[-1] + '; ' + char + ' placed onto stack')
+                    #self.__print('\t' + char + ' has higher precedence than ' + stack[-1] + '; ' + char + ' placed onto stack')
                     stack.append(char)
-                    self.__print('\t stack: ' + str(stack))
+                    #self.__print('\t stack: ' + str(stack))
 
                 # If `char` has a lower precedence:
                 else:
-                    self.__print('\t' + char + ' has lower precedence than ' + stack[-1])
+                    #self.__print('\t' + char + ' has lower precedence than ' + stack[-1])
                     # If we see an open paren, do not pop operators off stack.
                     if char is '(':
                         # Place open paren on stack as a marker
-                        self.__print('\topen paren found, placing on stack')
+                        # self.__print('\topen paren found, placing on stack')
                         stack.append(char)
                     elif char is ')':
                         # TODO: What if there is no open paren?
-                        self.__print('\tclose paren found, pop stack until find open paren')
+                        # self.__print('\tclose paren found, pop stack until find open paren')
                         while stack and stack[-1] is not self.metachars['(']:
                             post += stack.pop()
                         # Remove open paren
                         stack.pop()
                     else:
                         while stack and self.__prec(char) <= self.__prec(stack[-1]):
-                            self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
+                            #self.__print('\t' + char + ' has lower or equal precedence than ' + stack[-1] + ', pop top of stack')
                             post += stack.pop()
-                            self.__print('\t\tstack: ' + str(stack))
-                            self.__print('\t\tpostfix: ' + post)
+                            #self.__print('\t\tstack: ' + str(stack))
+                            #self.__print('\t\tpostfix: ' + post)
                         stack.append(char)
             else:
                 # Handle conversion of implicit to explicit concatenation.
-                self.__print(char + ' is a literal')
-                self.__print('\texplicit concatenation')
+                #self.__print(char + ' is a literal')
+                #self.__print('\texplicit concatenation')
                 if post != '' and post[-1] not in self.operators:
-                    self.__print('\tadding & to stack')
+                    #self.__print('\tadding & to stack')
                     stack.append('&')
                 post += char
 
