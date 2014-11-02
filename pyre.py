@@ -7,7 +7,7 @@
 #
 # [1]  http://ezekiel.vancouver.wsu.edu/~cs317/archive/projects/grep/grep.pdf
 # [2]  http://swtch.com/~rsc/regexp/regexp1.html
-# [2b] https://code.google.com/p/re1/source/browse/
+# [2b] http://swtch.com/~rsc/regexp/nfa.c.txt
 # [3]  http://csis.pace.edu/~wolf/CS122/infix-postfix.htm
 # [4]  http://stackoverflow.com/q/60208/1830334
 # [5]  http://perl.plover.com/Regex/article.html
@@ -44,19 +44,14 @@ class Pyre:
         """
 
         # Initialize the `curr_list_ptr` to point to a list with a single
-        # pointer, the start state.
-        
-        #curr_list_ptr = Ptr([ self.start_ptr ])
+        # pointer, the start state. This handles an operator being the start
+        # state.
         curr_list_ptr = self.__start_list(Ptr([]), self.start_ptr)
-        
+
         # Empty until set in `__step()`.
         next_list_ptr = Ptr([])
 
         for char in string_to_match:
-
-            #if char == 'r':
-            #    pdb.set_trace()
-
             self.__step(curr_list_ptr, char, next_list_ptr)
 
             # We swap lists because on the next iteration of this loop, we need
@@ -74,11 +69,10 @@ class Pyre:
     
     def __start_list(self, list_ptr, start_ptr):
         """Initializes the pointer list. Importantly, by calling `add_state()`
-        immediately, it handles a split at the beginning of the regular
-        expression.
+        immediately, it handles any operators at the beginning of the NFA, i.e.
+        the Boolean OR.
         """
 
-        start_ptr.get().id = 0
         self.list_id += 1
         self.__add_state(list_ptr, start_ptr)
         return list_ptr
@@ -109,8 +103,7 @@ class Pyre:
         state = state_ptr.get()
 
         # `id` prevents us from adding a state more than once to the same list.
-        # If `state` is `True`, it just is a dangling pointer.
-        if state == None or state == True or state.id == self.list_id:
+        if state == None or state.id == self.list_id:
             return
         state.id = self.list_id
         if state.trans == Metachar.split:
