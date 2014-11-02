@@ -11,24 +11,24 @@
 
 
 import sys
-sys.path.append('../')
-
-
+sys.path.append('~/pyre')
 import unittest
 
-import pyre
+#from pyre import *
+from pyre import pyre
 
 
 class TestIn2post(unittest.TestCase):
 
     def setUp(self):
-        self.fn = Pyre().in2post
+        self.Pyre = pyre.Pyre
+        self.use_debug = False
 
     def test_postfix(self):
-        post = self.fn('a+b')
-        self.assertEqual(post, 'ab+')
+        p = self.Pyre('', self.use_debug)
+        print( p._Pyre__in2post('a+b') )
 
-    def test_higher_precedence(self):
+    '''def test_higher_precedence(self):
         post = self.fn('a+b*c')
         self.assertEqual(post, 'abc*+')
 
@@ -52,8 +52,4 @@ class TestIn2post(unittest.TestCase):
 
     def test_nested_parens(self):
         post = self.fn('(a+(b-c))*d')
-        self.assertEqual(post, 'abc-+d*')
-
-
-# Run the test for any `__name__`. Main will be handled in testPyre.
-unittest.main()
+        self.assertEqual(post, 'abc-+d*')'''
