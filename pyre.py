@@ -15,8 +15,8 @@
 # -----------------------------------------------------------------------------
 
 
-import sys
 import pdb
+import sys
 
 from ptr import Ptr
 from nfa import State, Frag, Metachar
@@ -36,7 +36,8 @@ class Pyre:
         self.list_id = 0
         self.start_ptr = None
 
-        self.__compile(input_re)
+        if input_re is not '':
+            self.__compile(input_re)
 
   
     def match(self, string_to_match):
@@ -103,7 +104,9 @@ class Pyre:
         state = state_ptr.get()
 
         # `id` prevents us from adding a state more than once to the same list.
-        if state == None or state.id == self.list_id:
+        # Guard against `True`, because a 'dangling pointer' points to `True`.
+        # Should we have a `Metachar` that is 'null' to represent this?
+        if state == None or state is True or state.id == self.list_id:
             return
         state.id = self.list_id
         if state.trans == Metachar.split:
@@ -242,15 +245,15 @@ class Pyre:
                 f = stack.pop()
   
                 # Create a new NFA state in which the first out state is the
-                # state we want to repeat. This creates the loopback.
-                s = State(Metachar.split, f.start)
+                # state we want to repeat. This creates the loopback.i
+                s = State(Metachar.split, f.start, True)
 
                 # Patch the dangling out states of the previous fragment to the
                 # newly created state. This completes the loop.
                 f.patch(s)
                 
                 # Add the new fragment onto the stack.
-                stack.append( Frag(f.start, [s.out_ptr2]) )
+                stack.append( Frag(f.start, [s.out_ptr1]) )
 
             # Concatentation. This is the important step, because it reduces
             # the number of NFA fragments on the stack.
